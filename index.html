@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Feba Cyber Tracker</title>
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#00e5a0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CyberTracker">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161921;
+    --surface2: #1e2330;
+    --border: #2a3045;
+    --accent: #00e5a0;
+    --accent-dim: #00e5a015;
+    --accent2: #7c6dfa;
+    --text: #eef0f6;
+    --muted: #6b7494;
+    --danger: #ff5c5c;
+    --warn: #ffb84d;
+    --cert-c: #7c6dfa;
+    --skill-c: #00e5a0;
+    --proj-c: #ffb84d;
+    --tool-c: #ff7eb3;
+    --done-bg: #1a2420;
+    --radius: 14px;
+    --radius-sm: 9px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { height: 100%; }
+  body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 14px 16px 10px;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .logo { display: flex; align-items: center; gap: 9px; }
+  .logo img { width: 30px; height: 30px; }
+  .logo h1 { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+  .logo h1 span { color: var(--accent); }
+  .streak-badge {
+    font-size: 12px; color: var(--muted);
+    background: var(--surface2); padding: 4px 11px;
+    border-radius: 20px; border: 1px solid var(--border);
+  }
+
+  /* PROGRESS */
+  .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pbar-bg { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .pbar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width .5s ease; }
+  .pbar-label { font-size: 12px; color: var(--muted); min-width: 36px; text-align: right; }
+
+  /* STATS */
+  .stats { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .stats::-webkit-scrollbar { display: none; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 5px 13px; white-space: nowrap; flex-shrink: 0;
+  }
+  .stat b { font-size: 13px; font-weight: 700; color: var(--text); }
+  .stat span { font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+  /* TABS */
+  .tabs {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 12px 16px 0; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 7px 15px; font-size: 13px; color: var(--muted); cursor: pointer;
+    white-space: nowrap; transition: all .15s; flex-shrink: 0;
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+
+  /* SEARCH */
+  .search-wrap { padding: 10px 16px 0; }
+  .search-wrap input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text);
+    font-size: 14px; outline: none; transition: border-color .15s;
+  }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-wrap input:focus { border-color: var(--accent); }
+
+  /* LIST */
+  .list { padding: 12px 16px 110px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* SECTION LABEL */
+  .sec-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--muted); margin: 10px 0 4px; padding: 0 2px;
+  }
+
+  /* ITEM */
+  .item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 13px 14px; display: flex; align-items: flex-start; gap: 12px;
+    transition: border-color .15s, opacity .2s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .item[data-cat="cert"]    { border-left: 3px solid var(--cert-c); }
+  .item[data-cat="skill"]   { border-left: 3px solid var(--skill-c); }
+  .item[data-cat="project"] { border-left: 3px solid var(--proj-c); }
+  .item[data-cat="tool"]    { border-left: 3px solid var(--tool-c); }
+  .item.done { background: var(--done-bg); border-left-color: #2a4a3e !important; opacity: .65; }
+  .item.done .item-name { text-decoration: line-through; color: var(--muted); }
+
+  /* CHECKBOX */
+  .check {
+    width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; margin-top: 1px; transition: all .15s;
+  }
+  .check:active { transform: scale(.85); }
+  .item.done .check { background: var(--accent); border-color: var(--accent); }
+  .check-svg { display: none; }
+  .item.done .check-svg { display: block; }
+
+  /* ITEM BODY */
+  .item-body { flex: 1; min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.35; }
+  .item-sub  { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .item-tags { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; align-items: center; }
+
+  /* TAGS */
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .t-free  { background: #00e5a015; color: #00e5a0; }
+  .t-cert  { background: #7c6dfa18; color: #a09bfa; }
+  .t-proj  { background: #ffb84d18; color: #ffb84d; }
+  .t-prio  { background: #ff5c5c18; color: #ff7070; }
+  .t-paid  { background: #ffffff0d; color: #8a9bb5; }
+  .t-lab   { background: #7eb8ff18; color: #7eb8ff; }
+  .t-tool  { background: #ff7eb318; color: #ff7eb3; }
+  .done-date { font-size: 11px; color: var(--accent); }
+
+  /* LINK */
+  .item-link {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none; margin-top: 1px; transition: background .15s;
+  }
+  .item-link:active { background: var(--border); }
+  .item-link svg { width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 48px 0; color: var(--muted); font-size: 14px; }
+
+  /* ROADMAP */
+  .roadmap-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 15px 16px; overflow: hidden; position: relative;
+  }
+  .roadmap-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+  }
+  .roadmap-phase { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); margin-bottom: 3px; }
+  .roadmap-period { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .roadmap-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+  .roadmap-desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+  .roadmap-steps { display: flex; flex-direction: column; gap: 7px; }
+  .roadmap-step { font-size: 13px; color: var(--text); display: flex; gap: 9px; align-items: flex-start; }
+  .roadmap-step::before { content: "→"; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; padding: 8px 0 env(safe-area-inset-bottom, 16px);
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    cursor: pointer; padding: 4px 0; background: none; border: none;
+    color: var(--muted); font-size: 10px; font-weight: 600; transition: color .15s;
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--accent); color: #000; font-size: 13px; font-weight: 700;
+    padding: 9px 20px; border-radius: 20px; opacity: 0;
+    transition: all .3s; pointer-events: none; white-space: nowrap; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      <img src="./icon-192.png" alt="CyberTracker icon">
+      <h1>Feba <span>Cyber</span> Tracker</h1>
+    </div>
+    <div class="streak-badge" id="streak-badge">🔥 0 days</div>
+  </div>
+  <div class="progress-row">
+    <div class="pbar-bg"><div class="pbar-fill" id="pbar" style="width:0%"></div></div>
+    <div class="pbar-label" id="pct">0%</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="s-done">0</b><span>done</span></div>
+    <div class="stat"><b id="s-total">0</b><span>total</span></div>
+    <div class="stat"><b id="s-certs">0</b><span>certs</span></div>
+    <div class="stat"><b id="s-proj">0</b><span>projects</span></div>
+    <div class="stat"><b id="s-prio">0</b><span>priority left</span></div>
+  </div>
+</div>
+
+<div class="tabs" id="tab-row">
+  <button class="tab active" onclick="setTab('all')">All</button>
+  <button class="tab" onclick="setTab('cert')">Certifications</button>
+  <button class="tab" onclick="setTab('skill')">Courses</button>
+  <button class="tab" onclick="setTab('project')">Projects</button>
+  <button class="tab" onclick="setTab('tool')">Tools & Labs</button>
+  <button class="tab" onclick="setTab('prio')">⭐ Priority</button>
+  <button class="tab" onclick="setTab('done')">✓ Done</button>
+  <button class="tab" onclick="setTab('roadmap')">Roadmap</button>
+</div>
+
+<div class="search-wrap" id="search-wrap">
+  <input type="text" id="search" placeholder="Search anything..." oninput="render()">
+</div>
+
+<div class="list" id="list"></div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" id="nb-all" onclick="setTab('all')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+  </button>
+  <button class="nav-btn" id="nb-prio" onclick="setTab('prio')">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Priority
+  </button>
+  <button class="nav-btn" id="nb-roadmap" onclick="setTab('roadmap')">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Roadmap
+  </button>
+  <button class="nav-btn" id="nb-done" onclick="setTab('done')">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Done
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ───────────────────────────────────────────────────────────────────
+const DATA=[
+  // CERTIFICATIONS
+  {id:"c1",cat:"cert",name:"Google Cybersecurity Certificate",sub:"Coursera · 6 months · beginner-friendly",tags:["cert","free"],link:"https://www.coursera.org/professional-certificates/google-cybersecurity",pre:true},
+  {id:"c2",cat:"cert",name:"Cisco Intro to Cybersecurity",sub:"Cisco Networking Academy · free",tags:["cert","free"],link:"https://www.netacad.com/courses/cybersecurity/introduction-cybersecurity",pre:true},
+  {id:"c3",cat:"cert",name:"IBM zSystems Training Program",sub:"IBM · enterprise security basics",tags:["cert","free"],link:"https://www.ibm.com/training/zsystems",pre:true},
+  {id:"c4",cat:"cert",name:"Google Cloud Skills Boost",sub:"Google Cloud · hands-on labs & badges",tags:["cert","free"],link:"https://www.cloudskillsboost.google",pre:true},
+  {id:"c5",cat:"cert",name:"AWS Cloud Practitioner (CLF-C02)",sub:"Amazon · cloud fundamentals · exam ~$100",tags:["cert","prio","paid"],link:"https://aws.amazon.com/certification/certified-cloud-practitioner/",pre:false},
+  {id:"c6",cat:"cert",name:"CompTIA Security+ (SY0-701)",sub:"Target Q4 2026 · industry baseline",tags:["cert","prio","paid"],link:"https://www.comptia.org/certifications/security",pre:false},
+  {id:"c7",cat:"cert",name:"eJPT — Jr Penetration Tester",sub:"INE · first offensive cert",tags:["cert","paid"],link:"https://ine.com/certifications/ejpt-certification",pre:false},
+  {id:"c8",cat:"cert",name:"Certified Ethical Hacker (CEH)",sub:"EC-Council · intermediate",tags:["cert","paid"],link:"https://www.eccouncil.org/programs/certified-ethical-hacker-ceh/",pre:false},
+  {id:"c9",cat:"cert",name:"AWS Security Specialty (SCS-C02)",sub:"After Cloud Practitioner",tags:["cert","paid"],link:"https://aws.amazon.com/certification/certified-security-specialty/",pre:false},
+  {id:"c10",cat:"cert",name:"CCSP — Certified Cloud Security Pro",sub:"ISC2 · premium cloud cert",tags:["cert","paid"],link:"https://www.isc2.org/certifications/ccsp",pre:false},
+  {id:"c11",cat:"cert",name:"OSCP — Offensive Security Certified Pro",sub:"Gold standard pentest cert",tags:["cert","paid"],link:"https://www.offsec.com/courses/pen-200/",pre:false},
+
+  // SKILLS & COURSES
+  {id:"s1",cat:"skill",name:"TryHackMe — Pre-Security path",sub:"Browser labs · zero setup",tags:["free","prio"],link:"https://tryhackme.com/path/outline/presecurity",pre:false},
+  {id:"s2",cat:"skill",name:"TryHackMe — SOC Level 1 path",sub:"Maps to your Splunk internship",tags:["free","prio"],link:"https://tryhackme.com/path/outline/soclevel1",pre:false},
+  {id:"s3",cat:"skill",name:"TryHackMe — Jr Penetration Tester",sub:"Structured intro to pentest",tags:["free"],link:"https://tryhackme.com/path/outline/jrpenetrationtester",pre:false},
+  {id:"s4",cat:"skill",name:"PortSwigger Web Security Academy",sub:"Free OWASP Top 10 labs with Burp Suite",tags:["free","prio"],link:"https://portswigger.net/web-security",pre:false},
+  {id:"s5",cat:"skill",name:"Professor Messer's Security+ SY0-701",sub:"Best free Security+ video resource",tags:["free","prio"],link:"https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/",pre:false},
+  {id:"s6",cat:"skill",name:"Splunk Free Training — Fundamentals",sub:"Official Splunk free courses",tags:["free"],link:"https://www.splunk.com/en_us/training/free-courses/overview.html",pre:false},
+  {id:"s7",cat:"skill",name:"AWS Security Learning Plan",sub:"AWS Skill Builder · free tier labs",tags:["free"],link:"https://explore.skillbuilder.aws/learn/public/learning_plan/view/97/security-learning-plan",pre:false},
+  {id:"s8",cat:"skill",name:"OverTheWire: Bandit",sub:"Gamified Bash / Linux practice",tags:["free"],link:"https://overthewire.org/wargames/bandit/",pre:false},
+  {id:"s9",cat:"skill",name:"OWASP Testing Guide v4.2",sub:"Read alongside PortSwigger",tags:["free"],link:"https://owasp.org/www-project-web-security-testing-guide/",pre:false},
+  {id:"s10",cat:"skill",name:"Kubernetes Basics — official tutorial",sub:"Fills resume gap",tags:["free"],link:"https://kubernetes.io/docs/tutorials/kubernetes-basics/",pre:false},
+  {id:"s11",cat:"skill",name:"Terraform — HashiCorp Learn",sub:"Fills resume gap",tags:["free"],link:"https://developer.hashicorp.com/terraform/tutorials",pre:false},
+  {id:"s12",cat:"skill",name:"CS50's Cybersecurity (Harvard)",sub:"Free Harvard course",tags:["free"],link:"https://cs50.harvard.edu/cybersecurity/",pre:false},
+  {id:"s13",cat:"skill",name:"SANS Cyber Aces",sub:"Free foundational SANS course",tags:["free"],link:"https://www.sans.org/cyberaces/",pre:false},
+  {id:"s14",cat:"skill",name:"Python for Cybersecurity — Cybrary",sub:"Deepen scripting for security tools",tags:["free"],link:"https://www.cybrary.it/course/python-for-security-professionals",pre:false},
+
+  // PROJECTS
+  {id:"p1",cat:"project",name:"Password Strength Analyzer",sub:"Python · HTML · CSS · JS",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:true},
+  {id:"p2",cat:"project",name:"Network Port Scanner",sub:"Python · multithreaded TCP/IP · 1000+ ports",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:true},
+  {id:"p3",cat:"project",name:"Vulnerability Scanner",sub:"Python · Linux · CVE mapping",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:true},
+  {id:"p4",cat:"project",name:"Cloud Security Dashboard",sub:"AWS EC2 · S3 · IAM · Python",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:true},
+  {id:"p5",cat:"project",name:"Secure Login System",sub:"Python · SQL · bcrypt",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:true},
+  {id:"p6",cat:"project",name:"Log Monitoring / SIEM Mini-Project",sub:"Splunk · 50k+ logs · 6 dashboards",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:true},
+  {id:"p7",cat:"project",name:"CTF Write-up Blog / GitHub repo",sub:"Document HackTheBox & THM solves",tags:["proj","prio"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p8",cat:"project",name:"Active Directory Home Lab",sub:"Windows Server + Domain Controller",tags:["proj","prio"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p9",cat:"project",name:"Phishing Detection Tool",sub:"Python + ML · flags suspicious URLs",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p10",cat:"project",name:"Honeypot Deployment",sub:"Capture attacker behaviour + logs",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p11",cat:"project",name:"IDS/IPS with Snort or Suricata",sub:"Intrusion detection on home lab traffic",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p12",cat:"project",name:"Automated CVE Tracker",sub:"Python · NVD feed · critical alerts",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p13",cat:"project",name:"Packet Sniffer & Analyzer",sub:"Python Scapy · decode live packets",tags:["proj"],link:"https://github.com/febajallwin-arch",pre:false},
+  {id:"p14",cat:"project",name:"Web App Pentest Report",sub:"Full OWASP Top 10 audit on DVWA",tags:["proj","prio"],link:"https://github.com/febajallwin-arch",pre:false},
+
+  // TOOLS & LABS
+  {id:"t1",cat:"tool",name:"Hack The Box — Starting Point",sub:"CTF labs · noticed by recruiters",tags:["free","lab"],link:"https://www.hackthebox.com/hacker/hacking-labs",pre:false},
+  {id:"t2",cat:"tool",name:"VulnHub — offline VM labs",sub:"Download & run vulnerable VMs locally",tags:["free","lab"],link:"https://www.vulnhub.com/",pre:false},
+  {id:"t3",cat:"tool",name:"DVWA — Damn Vulnerable Web App",sub:"Local OWASP Top 10 practice target",tags:["free","lab"],link:"https://github.com/digininja/DVWA",pre:false},
+  {id:"t4",cat:"tool",name:"Metasploit Unleashed (free course)",sub:"Learn the exploitation framework",tags:["free","tool"],link:"https://www.offensive-security.com/metasploit-unleashed/",pre:false},
+  {id:"t5",cat:"tool",name:"Wireshark — packet analysis",sub:"Use with TryHackMe Wireshark room",tags:["free","tool"],link:"https://www.wireshark.org/docs/wsug_html_chunked/",pre:false},
+  {id:"t6",cat:"tool",name:"Burp Suite Community Edition",sub:"Free web app testing tool from PortSwigger",tags:["free","tool"],link:"https://portswigger.net/burp/communitydownload",pre:false},
+  {id:"t7",cat:"tool",name:"Nessus Essentials (free)",sub:"Vulnerability scanner · 16 IPs free",tags:["free","tool"],link:"https://www.tenable.com/products/nessus/nessus-essentials",pre:false},
+  {id:"t8",cat:"tool",name:"Kali Linux — set up VM",sub:"All pentest tools pre-installed",tags:["free","tool"],link:"https://www.kali.org/get-kali/",pre:false},
+  {id:"t9",cat:"tool",name:"picoCTF — beginner CTF platform",sub:"CMU's free CTF for students",tags:["free","lab"],link:"https://picoctf.org/",pre:false},
+  {id:"t10",cat:"tool",name:"CTFtime.org — upcoming competitions",sub:"Find live CTF events to compete in",tags:["free","lab"],link:"https://ctftime.org/",pre:false},
+  {id:"t11",cat:"tool",name:"MITRE ATT&CK Framework",sub:"Adversary TTPs · essential for SOC roles",tags:["free"],link:"https://attack.mitre.org/",pre:false},
+  {id:"t12",cat:"tool",name:"Shodan.io",sub:"Internet-facing asset search engine",tags:["free","tool"],link:"https://www.shodan.io/",pre:false},
+];
+
+const ROADMAP=[
+  {phase:"Phase 1",period:"Now – Aug 2026",title:"Foundation lock-in",desc:"While your ThiranX internship runs, reinforce with structured platforms.",steps:["Complete TryHackMe Pre-Security + SOC Level 1","1–2 PortSwigger labs daily","Finish AWS Cloud Practitioner exam prep","Publish CTF write-ups on GitHub as you go"]},
+  {phase:"Phase 2",period:"Sep – Nov 2026",title:"Certifications sprint",desc:"Stack credentials before 3rd year begins.",steps:["Pass AWS Cloud Practitioner exam","Study Security+ with Professor Messer","Book Security+ exam for Nov/Dec 2026","Build Active Directory home lab on VirtualBox"]},
+  {phase:"Phase 3",period:"Dec 2026 – May 2027",title:"Offensive skills",desc:"Shift from defensive to offensive knowledge for pentest roles.",steps:["Complete eJPT prep + pass exam","Join Hack The Box Pro Labs","Build 3 new projects: honeypot, IDS, phishing detector","Compete in 2+ CTFs on CTFtime.org"]},
+  {phase:"Phase 4",period:"Jun 2027 – May 2028",title:"Specialise & place",desc:"Final year — pick a track and aim for placement.",steps:["Choose: Cloud Security / Pentest / SOC Analyst","Target CCSP (cloud) or OSCP (pentest)","Apply for internships & bug bounty programs","Polish GitHub portfolio to 10+ quality projects"]},
+];
+
+const TAG_LABELS={cert:"Cert",free:"Free",proj:"Project",prio:"Priority",paid:"Paid",lab:"Lab",tool:"Tool"};
+const TAG_CLS={cert:"t-cert",free:"t-free",proj:"t-proj",prio:"t-prio",paid:"t-paid",lab:"t-lab",tool:"t-tool"};
+const CAT_LABELS={cert:"Certifications",skill:"Skills & Courses",project:"Projects",tool:"Tools & Labs"};
+const NAV_IDS=["nb-all","nb-prio","nb-roadmap","nb-done"];
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let state={};
+let currentTab="all";
+
+function save(){try{localStorage.setItem("feba_v3",JSON.stringify(state));}catch(e){}}
+function load(){
+  try{const d=localStorage.getItem("feba_v3");if(d)state=JSON.parse(d);}catch(e){state={};}
+  DATA.forEach(d=>{if(d.pre&&!state[d.id])state[d.id]={done:true,date:"Pre-completed"};});
+}
+
+// ── INTERACTIONS ───────────────────────────────────────────────────────────
+function toggle(id){
+  const item=DATA.find(d=>d.id===id);
+  if(!item)return;
+  if(state[id]&&state[id].done){
+    delete state[id];
+    showToast("Marked as to-do");
+  } else {
+    const d=new Date();
+    state[id]={done:true,date:d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"2-digit"})};
+    showToast("✓ "+item.name.split("—")[0].trim()+" done!");
+    updateStreak();
+  }
+  save();render();
+}
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+function updateStreak(){
+  const today=new Date().toDateString();
+  try{
+    const s=JSON.parse(localStorage.getItem("feba_streak")||'{"count":0,"last":"","best":0}');
+    if(s.last!==today){
+      const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+      s.count=s.last===yesterday.toDateString()?s.count+1:1;
+      s.last=today;s.best=Math.max(s.best||0,s.count);
+      localStorage.setItem("feba_streak",JSON.stringify(s));
+    }
+  }catch(e){}
+}
+
+function setTab(t){
+  currentTab=t;
+  document.querySelectorAll(".tab").forEach(el=>{
+    const map={all:"All",cert:"Certifications",skill:"Courses",project:"Projects",tool:"Tools & Labs",prio:"⭐ Priority",done:"✓ Done",roadmap:"Roadmap"};
+    el.classList.toggle("active",el.textContent.trim()===map[t]);
+  });
+  NAV_IDS.forEach(id=>document.getElementById(id)&&document.getElementById(id).classList.remove("active"));
+  const navMap={all:"nb-all",prio:"nb-prio",roadmap:"nb-roadmap",done:"nb-done"};
+  if(navMap[t])document.getElementById(navMap[t]).classList.add("active");
+  document.getElementById("search-wrap").style.display=(t==="roadmap")?"none":"block";
+  render();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderStats(){
+  const done=Object.values(state).filter(s=>s&&s.done).length;
+  const total=DATA.length;
+  document.getElementById("s-done").textContent=done;
+  document.getElementById("s-total").textContent=total;
+  document.getElementById("s-certs").textContent=DATA.filter(d=>d.cat==="cert"&&state[d.id]&&state[d.id].done).length;
+  document.getElementById("s-proj").textContent=DATA.filter(d=>d.cat==="project"&&state[d.id]&&state[d.id].done).length;
+  document.getElementById("s-prio").textContent=DATA.filter(d=>d.tags.includes("prio")&&!(state[d.id]&&state[d.id].done)).length;
+  const pct=Math.round(done/total*100);
+  document.getElementById("pbar").style.width=pct+"%";
+  document.getElementById("pct").textContent=pct+"%";
+  try{
+    const s=JSON.parse(localStorage.getItem("feba_streak")||'{"count":0}');
+    document.getElementById("streak-badge").textContent="🔥 "+s.count+" day"+(s.count===1?"":"s");
+  }catch(e){}
+}
+
+function itemHTML(d){
+  const isDone=state[d.id]&&state[d.id].done;
+  return`<div class="item${isDone?" done":""}" data-cat="${d.cat}">
+    <div class="check" onclick="toggle('${d.id}')">
+      <svg class="check-svg" viewBox="0 0 24 24" width="13" height="13" stroke="#000" stroke-width="3.5" fill="none"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="item-body">
+      <div class="item-name">${d.name}</div>
+      <div class="item-sub">${d.sub}</div>
+      <div class="item-tags">
+        ${d.tags.map(t=>`<span class="tag ${TAG_CLS[t]||"t-free"}">${TAG_LABELS[t]||t}</span>`).join("")}
+        ${isDone&&state[d.id].date!=="Pre-completed"?`<span class="done-date">✓ ${state[d.id].date}</span>`:""}
+      </div>
+    </div>
+    <a class="item-link" href="${d.link}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+    </a>
+  </div>`;
+}
+
+function render(){
+  renderStats();
+  const q=document.getElementById("search").value.toLowerCase();
+  const listEl=document.getElementById("list");
+
+  if(currentTab==="roadmap"){
+    listEl.innerHTML=ROADMAP.map((r,i)=>`
+      <div class="roadmap-card">
+        <div class="roadmap-phase">${r.phase}</div>
+        <div class="roadmap-period">${r.period}</div>
+        <div class="roadmap-title">${r.title}</div>
+        <div class="roadmap-desc">${r.desc}</div>
+        <div class="roadmap-steps">${r.steps.map(s=>`<div class="roadmap-step">${s}</div>`).join("")}</div>
+      </div>`).join("");
+    return;
+  }
+
+  let items=DATA.filter(d=>{
+    if(q&&!d.name.toLowerCase().includes(q)&&!d.sub.toLowerCase().includes(q))return false;
+    if(currentTab==="done")return state[d.id]&&state[d.id].done;
+    if(currentTab==="prio")return d.tags.includes("prio")&&!(state[d.id]&&state[d.id].done);
+    if(currentTab!=="all")return d.cat===currentTab;
+    return true;
+  });
+
+  if(!items.length){listEl.innerHTML='<div class="empty">Nothing here — keep pushing! 💪</div>';return;}
+
+  if(currentTab==="all"||currentTab==="done"){
+    const groups={};
+    items.forEach(d=>{const g=CAT_LABELS[d.cat];if(!groups[g])groups[g]=[];groups[g].push(d);});
+    listEl.innerHTML=Object.entries(groups).map(([g,its])=>`<div class="sec-label">${g}</div>${its.map(itemHTML).join("")}`).join("");
+  } else {
+    listEl.innerHTML=items.map(itemHTML).join("");
+  }
+}
+
+// ── SERVICE WORKER ─────────────────────────────────────────────────────────
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("./sw.js")
+      .then(()=>console.log("SW registered"))
+      .catch(e=>console.log("SW failed:",e));
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>
